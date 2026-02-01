@@ -1,73 +1,57 @@
----
-name: audiobookshelf
-description: Audiobookshelf integration with Google Cast support and sleep timer.
-homepage: https://www.audiobookshelf.org
-metadata:
-  openclaw:
-    emoji: '📚'
-    requires:
-      bins: ['abs']
-    install:
-      - id: pnpm
-        kind: pnpm
-        package: openclaw-skill-audiobookshelf
-        bins: ['abs']
-        label: 'Install audiobookshelf skill (pnpm)'
----
+# Audiobookshelf Skill for OpenClaw
 
-# Audiobookshelf Skill
+## Overview
 
-Control Audiobookshelf playback with Google Cast support.
+Control Audiobookshelf audiobook library with voice commands and Google Cast playback.
+
+## Capabilities
+
+- Browse and search audiobook library
+- Play audiobooks on Google Cast devices
+- Control playback (pause, resume, stop)
+- Sleep timer with automatic progress sync
+- Multi-user support
+
+## Voice Commands
+
+### Browsing
+- "List my audiobooks"
+- "Search for [book title]"
+- "What libraries do I have?"
+
+### Playback
+- "Play [book title]"
+- "Play [book title] on [device name]"
+- "Pause audiobook"
+- "Resume audiobook"
+- "Stop audiobook"
+
+### Devices
+- "What speakers are available?"
+- "Set default speaker to [device name]"
+
+### Sleep Timer
+- "Set sleep timer for 30 minutes"
+- "Cancel sleep timer"
+- "How much time is left on the sleep timer?"
+
+## Configuration
+
+### Required
+- Audiobookshelf server URL
+- API token
+
+### Optional
+- Default Cast device name
+- Request timeout
 
 ## Setup
 
-1. Create an API key in Audiobookshelf (Settings → Users → API Keys)
-2. Configure the skill:
-   ```bash
-   export AUDIOBOOKSHELF_URL="https://your-server.com"
-   export AUDIOBOOKSHELF_API_KEY="your-api-key"
-   ```
+1. Get your API token from Audiobookshelf (Settings → Users → API Token)
+2. Configure the skill with your server URL and token
+3. Optionally set a default Cast device
 
-## Commands
+## Dependencies
 
-### Library
-
-- `abs library` — List libraries
-- `abs books [--library <id>]` — List books in library
-- `abs search "<query>"` — Search across all libraries
-
-### Playback
-
-- `abs play <book-id> [--device <speaker>]` — Start playback
-- `abs resume [--device <speaker>]` — Resume last book from saved position
-- `abs pause` — Pause current playback
-- `abs stop` — Stop and sync progress
-
-### Devices
-
-- `abs devices` — Discover Google Cast speakers
-- `abs device set "<name>"` — Set default speaker
-
-### Sleep Timer
-
-- `abs sleep <minutes>` — Set sleep timer
-- `abs sleep cancel` — Cancel sleep timer
-- `abs sleep status` — Show timer status
-
-## Multi-user
-
-Each user needs their own API key. Configure per-user in OpenClaw agent config:
-
-```yaml
-skills:
-  audiobookshelf:
-    config:
-      url: 'https://abs.example.com'
-      apiKey: 'user-specific-key'
-```
-
-## Notes
-
-- Progress syncs automatically on pause/stop
-- Sleep timer syncs progress before pausing
-- Speaker discovery uses mDNS (same network required)
+- Audiobookshelf server (v2.0+)
+- Network access to Cast devices (for Google Cast feature)
