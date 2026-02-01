@@ -1,0 +1,47 @@
+{
+  "name": "openclaw-skill-audiobookshelf",
+  "version": "0.1.0",
+  "description": "OpenClaw skill for Audiobookshelf with Google Cast support",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "abs": "dist/bin/abs.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist/"
+  },
+  "keywords": [
+    "openclaw",
+    "skill",
+    "audiobookshelf",
+    "audiobook",
+    "google-cast",
+    "chromecast"
+  ],
+  "author": "Troy Kelly",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/troykelly/openclaw-skill-audiobookshelf.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "castv2-client": "^1.2.0",
+    "bonjour-service": "^1.3.0"
+  }
+}

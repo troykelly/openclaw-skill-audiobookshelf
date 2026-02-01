@@ -1,0 +1,20 @@
+{
+  "name": "openclaw-skill-audiobookshelf",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "runArgs": [
+    "--env-file", "${localWorkspaceFolder}/.env"
+  ],
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "remoteUser": "node"
+}
