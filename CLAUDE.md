@@ -6,9 +6,9 @@ This repo is intended to be maintained by both humans and automated agents. The 
 
 ## Mandatory source docs (read first)
 
-1) **Dev Runbook:** `/home/moltbot/molt/dev/DEV-RUNBOOK.md`
-2) **Agentic Coding Rules:** `CODING.md` (this repo)
-3) Repo-local guidelines: `AGENTS.md` (this repo)
+1. **Dev Runbook:** `/home/moltbot/molt/dev/DEV-RUNBOOK.md`
+2. **Agentic Coding Rules:** `CODING.md` (this repo)
+3. Repo-local guidelines: `AGENTS.md` (this repo)
 
 If you have not read them in this environment, stop and read them.
 

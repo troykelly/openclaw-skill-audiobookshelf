@@ -6,15 +6,10 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode"
-      ]
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
     }
   },
-  "runArgs": [
-    "--env-file", "${localWorkspaceFolder}/.env"
-  ],
+  "runArgs": ["--env-file", "${localWorkspaceFolder}/.env"],
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "remoteUser": "node"
 }
