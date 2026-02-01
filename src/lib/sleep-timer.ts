@@ -33,9 +33,12 @@ export class SleepTimer {
     this.cancel();
     this.endTime = Date.now() + minutes * 60 * 1000;
 
-    this.timeoutId = setTimeout(async () => {
-      await this.expire();
-    }, minutes * 60 * 1000);
+    this.timeoutId = setTimeout(
+      () => {
+        void this.expire();
+      },
+      minutes * 60 * 1000
+    );
   }
 
   /**

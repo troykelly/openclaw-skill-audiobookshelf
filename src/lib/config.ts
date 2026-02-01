@@ -28,8 +28,8 @@ export interface AudiobookshelfConfig {
  * Load configuration from environment variables
  */
 export function loadConfigFromEnv(): AudiobookshelfConfig {
-  const url = process.env['AUDIOBOOKSHELF_URL'];
-  const apiKey = process.env['AUDIOBOOKSHELF_API_KEY'];
+  const url = process.env.AUDIOBOOKSHELF_URL;
+  const apiKey = process.env.AUDIOBOOKSHELF_API_KEY;
 
   if (!url) {
     throw new Error('AUDIOBOOKSHELF_URL environment variable is required');
@@ -42,9 +42,9 @@ export function loadConfigFromEnv(): AudiobookshelfConfig {
   return {
     url: url.replace(/\/$/, ''), // Remove trailing slash
     apiKey,
-    defaultDevice: process.env['AUDIOBOOKSHELF_DEFAULT_DEVICE'],
-    timeout: process.env['AUDIOBOOKSHELF_TIMEOUT']
-      ? parseInt(process.env['AUDIOBOOKSHELF_TIMEOUT'], 10)
+    defaultDevice: process.env.AUDIOBOOKSHELF_DEFAULT_DEVICE,
+    timeout: process.env.AUDIOBOOKSHELF_TIMEOUT
+      ? parseInt(process.env.AUDIOBOOKSHELF_TIMEOUT, 10)
       : 10000,
   };
 }
