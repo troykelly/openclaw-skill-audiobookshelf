@@ -40,9 +40,9 @@ export declare class AudiobookshelfClient {
      */
     getBooks(libraryId: string): Promise<Book[]>;
     /**
-     * Search across libraries
+     * Search within a library
      */
-    search(query: string): Promise<Book[]>;
+    search(query: string, libraryId?: string): Promise<Book[]>;
     /**
      * Get progress for a book
      */

@@ -80,24 +80,22 @@ export class AudiobookshelfClient {
    * List books in a library
    */
   async getBooks(libraryId: string): Promise<Book[]> {
-    interface LibraryItemResult {
-      libraryItem: {
-        id: string;
-        libraryId: string;
+    interface LibraryItem {
+      id: string;
+      libraryId: string;
+      media: {
         coverPath?: string;
-        media: {
-          metadata: {
-            title: string;
-            authorName?: string;
-            narratorName?: string;
-          };
-          duration: number;
+        metadata: {
+          title: string;
+          authorName?: string;
+          narratorName?: string;
         };
+        duration: number;
       };
     }
 
     interface LibraryItemResponse {
-      results: LibraryItemResult[];
+      results: LibraryItem[];
     }
 
     const response = await this.request<LibraryItemResponse>(
@@ -105,30 +103,41 @@ export class AudiobookshelfClient {
     );
 
     return response.results.map((item) => ({
-      id: item.libraryItem.id,
-      libraryId: item.libraryItem.libraryId,
-      title: item.libraryItem.media.metadata.title,
-      author: item.libraryItem.media.metadata.authorName,
-      narrator: item.libraryItem.media.metadata.narratorName,
-      duration: item.libraryItem.media.duration,
-      coverPath: item.libraryItem.coverPath,
+      id: item.id,
+      libraryId: item.libraryId,
+      title: item.media.metadata.title,
+      author: item.media.metadata.authorName,
+      narrator: item.media.metadata.narratorName,
+      duration: item.media.duration,
+      coverPath: item.media.coverPath,
     }));
   }
 
   /**
-   * Search across libraries
+   * Search within a library
    */
-  async search(query: string): Promise<Book[]> {
+  async search(query: string, libraryId?: string): Promise<Book[]> {
+    // If no libraryId provided, search first library
+    if (!libraryId) {
+      const libraries = await this.getLibraries();
+      if (libraries.length === 0) {
+        return [];
+      }
+      libraryId = libraries[0].id;
+    }
+
     interface SearchResultItem {
       libraryItem: {
         id: string;
         libraryId: string;
-        coverPath?: string;
         media: {
+          coverPath?: string;
           metadata: {
             title: string;
             authorName?: string;
             narratorName?: string;
+            authors?: Array<{ name: string }>;
+            narrators?: string[];
           };
           duration: number;
         };
@@ -140,19 +149,22 @@ export class AudiobookshelfClient {
     }
 
     const response = await this.request<SearchResponse>(
-      `/api/search?q=${encodeURIComponent(query)}`
+      `/api/libraries/${libraryId}/search?q=${encodeURIComponent(query)}`
     );
 
     const books = response.book ?? [];
-    return books.map((item) => ({
-      id: item.libraryItem.id,
-      libraryId: item.libraryItem.libraryId,
-      title: item.libraryItem.media.metadata.title,
-      author: item.libraryItem.media.metadata.authorName,
-      narrator: item.libraryItem.media.metadata.narratorName,
-      duration: item.libraryItem.media.duration,
-      coverPath: item.libraryItem.coverPath,
-    }));
+    return books.map((item) => {
+      const metadata = item.libraryItem.media.metadata;
+      return {
+        id: item.libraryItem.id,
+        libraryId: item.libraryItem.libraryId,
+        title: metadata.title,
+        author: metadata.authorName ?? metadata.authors?.[0]?.name,
+        narrator: metadata.narratorName ?? metadata.narrators?.[0],
+        duration: item.libraryItem.media.duration,
+        coverPath: item.libraryItem.media.coverPath,
+      };
+    });
   }
 
   /**
