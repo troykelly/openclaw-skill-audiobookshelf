@@ -19,7 +19,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist/ coverage/"
+    "clean": "rm -rf dist/ coverage/",
+    "prepack": "pnpm run build",
+    "prepare": "pnpm run build"
   },
   "keywords": [
     "openclaw",
@@ -51,5 +53,11 @@
   "dependencies": {
     "castv2-client": "^1.2.0",
     "bonjour-service": "^1.3.0"
-  }
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ]
 }
