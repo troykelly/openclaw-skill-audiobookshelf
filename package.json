@@ -20,8 +20,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist/ coverage/",
-    "prepack": "pnpm run build",
-    "prepare": "pnpm run build"
+    "prepack": "pnpm run build"
   },
   "keywords": [
     "openclaw",
