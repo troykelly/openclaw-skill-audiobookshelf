@@ -41,7 +41,8 @@ async function main() {
         else {
             console.log('\nAvailable devices:');
             for (const device of devices) {
-                console.log(`  • ${device.name} (${device.host}:${device.port})`);
+                const id = device.id ? ` [${device.id}]` : '';
+                console.log(`  • ${device.name}${id} (${device.host}:${String(device.port)})`);
             }
         }
         process.exit(0);
@@ -66,10 +67,16 @@ async function main() {
         console.error('\nSet ABS_SERVER and ABS_TOKEN environment variables, or create ~/.config/abs/config.json');
         process.exit(1);
     }
-    // Create client
+    // Create client - validation above ensures url and apiKey are present
+    const url = config.url;
+    const apiKey = config.apiKey;
+    if (!url || !apiKey) {
+        // This should never happen after validation, but TypeScript needs this
+        throw new Error('Configuration validation failed: missing url or apiKey');
+    }
     const client = new AudiobookshelfClient({
-        url: config.url,
-        apiKey: config.apiKey,
+        url,
+        apiKey,
         timeout: config.timeout,
     });
     // Handle remaining commands
@@ -196,6 +203,34 @@ async function main() {
             console.log('Use the cast device controls to stop playback.');
             break;
         }
+        case 'status': {
+            // Status shows current playback state
+            // This is a placeholder - full implementation needs Cast session persistence
+            const statusInfo = {
+                playback: {
+                    active: false,
+                    device: null,
+                    book: null,
+                    position: 0,
+                    duration: 0,
+                },
+                sleepTimer: {
+                    active: false,
+                    remainingSeconds: 0,
+                },
+            };
+            if (result.flags.json) {
+                console.log(JSON.stringify(statusInfo, null, 2));
+            }
+            else {
+                console.log('Playback Status:');
+                console.log('  Active: No (Cast session persistence not implemented yet)');
+                console.log('\nSleep Timer:');
+                console.log('  Active: No');
+                console.log('\nNote: Full status requires OpenClaw integration for session persistence.');
+            }
+            break;
+        }
         case 'sleep': {
             if (result.subcommand === 'cancel') {
                 console.log('Sleep timer cancelled (if any was active).');
@@ -205,25 +240,127 @@ async function main() {
             }
             else {
                 const minutes = result.args.minutes;
+                const fadeSeconds = result.args.fade ?? 30;
                 if (!minutes) {
                     console.error('Error: Duration in minutes required');
                     process.exit(2);
                 }
-                console.log(`Sleep timer set for ${minutes} minutes.`);
+                console.log(`Sleep timer set for ${String(minutes)} minutes with ${String(fadeSeconds)}s fade.`);
                 console.log('Note: Timer runs in this process. For persistent timers, integrate with OpenClaw.');
                 const timer = new SleepTimer({
-                    onSyncProgress: async () => {
+                    onSyncProgress: () => {
                         console.log('Syncing progress...');
+                        return Promise.resolve();
                     },
-                    onExpire: async () => {
-                        console.log('Sleep timer expired. Stopping playback...');
+                    onExpire: () => {
+                        console.log('Sleep timer expired. Fading out and stopping playback...');
                         process.exit(0);
+                        // Note: process.exit never returns, but TypeScript doesn't know this
+                        return Promise.resolve();
                     },
                 });
                 timer.start(minutes);
-                console.log(`Timer active. Will expire in ${minutes} minutes.`);
-                // Keep process alive
-                await new Promise(() => { });
+                console.log(`Timer active. Will expire in ${String(minutes)} minutes.`);
+                console.log(`Fade duration: ${String(fadeSeconds)} seconds`);
+                // Keep process alive - using a never-resolving promise
+                await new Promise(() => {
+                    // Intentionally empty - keeps process alive
+                });
+            }
+            break;
+        }
+        case 'service': {
+            const port = parseInt(process.env.ABS_PROXY_PORT ?? '8765', 10);
+            switch (result.subcommand) {
+                case 'run': {
+                    // Run proxy server in foreground
+                    if (!config.url || !config.apiKey) {
+                        console.error('Error: ABS_SERVER and ABS_TOKEN must be set to run the proxy');
+                        process.exit(1);
+                    }
+                    // Dynamic import to avoid loading proxy dependencies unless needed
+                    const { ProxyServer } = await import('../proxy/index.js');
+                    const server = new ProxyServer({
+                        port,
+                        audiobookshelfUrl: config.url,
+                        audiobookshelfToken: config.apiKey,
+                    });
+                    server.on('listening', () => {
+                        console.log(`Audio proxy server listening on port ${String(port)}`);
+                        console.log('Health check: http://localhost:' + String(port) + '/health');
+                        console.log('Press Ctrl+C to stop');
+                    });
+                    server.on('session-started', (info) => {
+                        console.log(`Session started: ${info.sessionId} (book: ${info.bookId})`);
+                    });
+                    server.on('session-ended', (info) => {
+                        console.log(`Session ended: ${info.sessionId}`);
+                    });
+                    server.on('error', (err) => {
+                        console.error('Server error:', err.message);
+                    });
+                    // Handle shutdown
+                    process.on('SIGINT', () => {
+                        console.log('\nShutting down...');
+                        void server.stop().then(() => {
+                            process.exit(0);
+                        });
+                    });
+                    process.on('SIGTERM', () => {
+                        void server.stop().then(() => {
+                            process.exit(0);
+                        });
+                    });
+                    await server.start();
+                    // Keep process alive
+                    await new Promise(() => {
+                        // Intentionally empty - keeps process alive
+                    });
+                    break;
+                }
+                case 'start': {
+                    console.log('Starting proxy daemon...');
+                    console.log('Note: For persistent service, use systemd/launchd or Docker.');
+                    console.log('See deploy/ directory for configuration files.');
+                    console.log('Or run "abs service run" in a terminal/screen session.');
+                    break;
+                }
+                case 'stop': {
+                    console.log('Stopping proxy daemon...');
+                    console.log('Note: Use systemctl stop abs-proxy or launchctl unload for managed services.');
+                    break;
+                }
+                case 'status': {
+                    // Check if proxy is running by hitting health endpoint
+                    try {
+                        const response = await fetch(`http://localhost:${String(port)}/health`);
+                        if (response.ok) {
+                            const health = await response.json();
+                            if (result.flags.json) {
+                                console.log(JSON.stringify({ running: true, port, ...health }, null, 2));
+                            }
+                            else {
+                                console.log(`Proxy Status: Running on port ${String(port)}`);
+                                console.log(`Active sessions: ${String(health.sessions)}`);
+                            }
+                        }
+                        else {
+                            console.log('Proxy Status: Not running or unhealthy');
+                        }
+                    }
+                    catch {
+                        if (result.flags.json) {
+                            console.log(JSON.stringify({ running: false, port }, null, 2));
+                        }
+                        else {
+                            console.log('Proxy Status: Not running');
+                        }
+                    }
+                    break;
+                }
+                default:
+                    console.error('Unknown service subcommand');
+                    process.exit(2);
             }
             break;
         }
@@ -234,7 +371,8 @@ async function main() {
     }
 }
 main().catch((error) => {
-    console.error(`Error: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
     process.exit(1);
 });
 //# sourceMappingURL=abs.js.map

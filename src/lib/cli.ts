@@ -5,6 +5,10 @@
  * Uses a lightweight custom parser - no external dependencies.
  */
 
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
 /**
  * CLI configuration from environment variables
  */
@@ -316,9 +320,21 @@ Exit Codes:
 `;
 }
 
+// Compute version at module load time
+let _version = 'unknown';
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const pkgPath = join(__dirname, '..', '..', 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version: string };
+  _version = pkg.version;
+} catch {
+  // Keep default 'unknown'
+}
+
 /**
- * Get version string
+ * Get version string from package.json
  */
 export function getVersion(): string {
-  return '0.0.1';
+  return _version;
 }

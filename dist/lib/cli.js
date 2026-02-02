@@ -4,6 +4,9 @@
  * Provides command-line argument parsing for the abs CLI.
  * Uses a lightweight custom parser - no external dependencies.
  */
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 /**
  * Valid commands
  */
@@ -18,9 +21,12 @@ const COMMANDS = [
     'devices',
     'device',
     'sleep',
+    'status',
+    'service',
     'help',
     'version',
 ];
+const SERVICE_SUBCOMMANDS = ['run', 'start', 'stop', 'status'];
 /**
  * Parse CLI arguments
  * @param argv - Command line arguments (without node and script name)
@@ -77,6 +83,17 @@ export function parseCLI(argv) {
             i++;
             if (i < argv.length) {
                 result.args.device = argv[i];
+            }
+            i++;
+            continue;
+        }
+        if (arg === '--fade' || arg === '-f') {
+            i++;
+            if (i < argv.length) {
+                const fadeSeconds = parseInt(argv[i], 10);
+                if (!isNaN(fadeSeconds)) {
+                    result.args.fade = fadeSeconds;
+                }
             }
             i++;
             continue;
@@ -171,7 +188,25 @@ export function parseCLI(argv) {
                 }
                 else {
                     result.args.minutes = minutes;
+                    // Set default fade duration if not specified
+                    result.args.fade = result.args.fade ?? 30;
                 }
+            }
+            break;
+        case 'status':
+            // Status command takes no required arguments
+            break;
+        case 'service':
+            if (positional.length < 2) {
+                result.error = 'service requires a subcommand (run, start, stop, status)';
+                result.exitCode = 2;
+            }
+            else if (SERVICE_SUBCOMMANDS.includes(positional[1])) {
+                result.subcommand = positional[1];
+            }
+            else {
+                result.error = `Unknown service subcommand: ${positional[1]}`;
+                result.exitCode = 2;
             }
             break;
     }
@@ -191,21 +226,29 @@ Commands:
   resume [--device <name>]    Resume last book
   pause                       Pause current playback
   stop                        Stop and sync progress
-  devices                     List Cast devices
+  status                      Show current playback status
+  devices                     List Cast devices (with IDs)
   device set "<name>"         Set default device
-  sleep <minutes>             Set sleep timer
+  sleep <min> [--fade <sec>]  Set sleep timer (fade default: 30s)
   sleep cancel                Cancel sleep timer
   sleep status                Show timer status
+  service run                 Run proxy server (foreground)
+  service start               Start proxy daemon
+  service stop                Stop proxy daemon
+  service status              Show proxy status
 
 Options:
   -h, --help                  Show this help
   -v, --version               Show version
+  -d, --device <name>         Target Cast device
+  -f, --fade <seconds>        Fade duration for sleep timer
   --json                      Output as JSON
 
 Environment Variables:
   ABS_SERVER                  Audiobookshelf server URL
   ABS_TOKEN                   API token
   ABS_DEVICE                  Default Cast device name
+  ABS_PROXY_PORT              Proxy server port (default: 8765)
 
 Exit Codes:
   0  Success
@@ -213,10 +256,22 @@ Exit Codes:
   2  Usage error
 `;
 }
+// Compute version at module load time
+let _version = 'unknown';
+try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const pkgPath = join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    _version = pkg.version;
+}
+catch {
+    // Keep default 'unknown'
+}
 /**
- * Get version string
+ * Get version string from package.json
  */
 export function getVersion() {
-    return '0.0.1';
+    return _version;
 }
 //# sourceMappingURL=cli.js.map

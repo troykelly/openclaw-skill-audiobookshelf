@@ -22,6 +22,7 @@ export interface CLIArgs {
     device?: string;
     name?: string;
     minutes?: number;
+    fade?: number;
     [key: string]: string | number | undefined;
 }
 /**
@@ -56,7 +57,7 @@ export declare function parseCLI(argv: string[]): CLIResult;
  */
 export declare function getHelpText(): string;
 /**
- * Get version string
+ * Get version string from package.json
  */
 export declare function getVersion(): string;
 //# sourceMappingURL=cli.d.ts.map
