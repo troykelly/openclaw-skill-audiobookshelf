@@ -20,6 +20,15 @@ export {
 // Re-export Cast client
 export { CastClient, type MediaLoadOptions } from './client.js';
 
+// Re-export position tracker
+export {
+  PositionTracker,
+  type SyncCallback,
+  type FinishedCallback,
+  type ErrorCallback,
+  type PositionTrackerOptions,
+} from './position-tracker.js';
+
 // Re-export castv2-client types for convenience
 export { Client, DefaultMediaReceiver } from 'castv2-client';
 export { Bonjour } from 'bonjour-service';
