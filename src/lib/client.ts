@@ -136,7 +136,7 @@ export class AudiobookshelfClient {
             title: string;
             authorName?: string;
             narratorName?: string;
-            authors?: Array<{ name: string }>;
+            authors?: { name: string }[];
             narrators?: string[];
           };
           duration: number;
