@@ -75,10 +75,16 @@ export declare class DeviceDiscovery {
     private performDiscovery;
     /**
      * Convert services to devices, resolving .local hostnames as needed
+     *
+     * First builds a map of .local hostnames to IPs from services that have addresses,
+     * then uses this cache to resolve hostnames for Cast groups (which often have empty addresses).
      */
     private resolveDevices;
     /**
      * Convert a Bonjour service to a CastDevice, resolving .local hostnames
+     *
+     * @param service - The Bonjour service to convert
+     * @param hostnameCache - Map of .local hostnames to IPs from other discovered services
      */
     private serviceToDeviceWithResolution;
     /**
