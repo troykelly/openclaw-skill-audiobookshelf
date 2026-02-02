@@ -1,0 +1,49 @@
+# Audiobookshelf Cast Proxy - systemd unit file
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/abs-proxy.service
+#   2. Edit Environment variables or create /etc/abs-proxy.env
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable abs-proxy
+#   5. sudo systemctl start abs-proxy
+#
+# Or use: abs service start (if running as root/sudo)
+
+[Unit]
+Description=Audiobookshelf Cast Proxy
+Documentation=https://github.com/troykelly/openclaw-skill-audiobookshelf
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+
+# Set these to your Audiobookshelf server details
+# Option 1: Direct environment variables
+Environment=ABS_SERVER=https://your-audiobookshelf-server.com
+Environment=ABS_TOKEN=your-api-token
+Environment=ABS_PROXY_PORT=8765
+
+# Option 2: Environment file (uncomment and create file)
+#EnvironmentFile=/etc/abs-proxy.env
+
+# Run the proxy server
+ExecStart=/usr/bin/abs service run
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+# Allow binding to network ports
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

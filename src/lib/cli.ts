@@ -66,9 +66,12 @@ const COMMANDS = [
   'device',
   'sleep',
   'status',
+  'service',
   'help',
   'version',
 ];
+
+const SERVICE_SUBCOMMANDS = ['run', 'start', 'stop', 'status'];
 
 /**
  * Parse CLI arguments
@@ -251,6 +254,18 @@ export function parseCLI(argv: string[]): CLIResult {
     case 'status':
       // Status command takes no required arguments
       break;
+
+    case 'service':
+      if (positional.length < 2) {
+        result.error = 'service requires a subcommand (run, start, stop, status)';
+        result.exitCode = 2;
+      } else if (SERVICE_SUBCOMMANDS.includes(positional[1])) {
+        result.subcommand = positional[1];
+      } else {
+        result.error = `Unknown service subcommand: ${positional[1]}`;
+        result.exitCode = 2;
+      }
+      break;
   }
 
   return result;
@@ -276,6 +291,10 @@ Commands:
   sleep <min> [--fade <sec>]  Set sleep timer (fade default: 30s)
   sleep cancel                Cancel sleep timer
   sleep status                Show timer status
+  service run                 Run proxy server (foreground)
+  service start               Start proxy daemon
+  service stop                Stop proxy daemon
+  service status              Show proxy status
 
 Options:
   -h, --help                  Show this help
@@ -288,6 +307,7 @@ Environment Variables:
   ABS_SERVER                  Audiobookshelf server URL
   ABS_TOKEN                   API token
   ABS_DEVICE                  Default Cast device name
+  ABS_PROXY_PORT              Proxy server port (default: 8765)
 
 Exit Codes:
   0  Success

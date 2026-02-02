@@ -1,0 +1,31 @@
+# Audiobookshelf Cast Proxy - Docker Compose
+#
+# Usage:
+#   1. Copy .env.example to .env and configure
+#   2. docker-compose up -d
+#
+# Or with environment variables:
+#   ABS_SERVER=... ABS_TOKEN=... docker-compose up -d
+
+version: '3.8'
+
+services:
+  abs-proxy:
+    build: .
+    image: abs-proxy:latest
+    container_name: abs-proxy
+    restart: unless-stopped
+    ports:
+      - "${ABS_PROXY_PORT:-8765}:8765"
+    environment:
+      - ABS_SERVER=${ABS_SERVER}
+      - ABS_TOKEN=${ABS_TOKEN}
+      - ABS_PROXY_PORT=8765
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # For mDNS device discovery, use host network
+    # network_mode: host

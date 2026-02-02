@@ -256,6 +256,45 @@ describe('CLI Parser', () => {
     });
   });
 
+  describe('service command', () => {
+    it('should parse "service run"', () => {
+      const result = parseCLI(['service', 'run']);
+      expect(result.command).toBe('service');
+      expect(result.subcommand).toBe('run');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should parse "service start"', () => {
+      const result = parseCLI(['service', 'start']);
+      expect(result.command).toBe('service');
+      expect(result.subcommand).toBe('start');
+    });
+
+    it('should parse "service stop"', () => {
+      const result = parseCLI(['service', 'stop']);
+      expect(result.command).toBe('service');
+      expect(result.subcommand).toBe('stop');
+    });
+
+    it('should parse "service status"', () => {
+      const result = parseCLI(['service', 'status']);
+      expect(result.command).toBe('service');
+      expect(result.subcommand).toBe('status');
+    });
+
+    it('should error on "service" without subcommand', () => {
+      const result = parseCLI(['service']);
+      expect(result.error).toBeDefined();
+      expect(result.exitCode).toBe(2);
+    });
+
+    it('should error on "service invalid"', () => {
+      const result = parseCLI(['service', 'invalid']);
+      expect(result.error).toBeDefined();
+      expect(result.exitCode).toBe(2);
+    });
+  });
+
   describe('unknown command', () => {
     it('should error on unknown command', () => {
       const result = parseCLI(['foobar']);

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Audiobookshelf Cast Proxy - launchd plist for macOS
+
+  Installation:
+    1. Copy this file to ~/Library/LaunchAgents/com.openclaw.abs-proxy.plist
+    2. Edit the EnvironmentVariables section with your server details
+    3. launchctl load ~/Library/LaunchAgents/com.openclaw.abs-proxy.plist
+
+  Or for system-wide installation:
+    1. Copy to /Library/LaunchDaemons/com.openclaw.abs-proxy.plist
+    2. sudo launchctl load /Library/LaunchDaemons/com.openclaw.abs-proxy.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.openclaw.abs-proxy</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/abs</string>
+        <string>service</string>
+        <string>run</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ABS_SERVER</key>
+        <string>https://your-audiobookshelf-server.com</string>
+        <key>ABS_TOKEN</key>
+        <string>your-api-token</string>
+        <key>ABS_PROXY_PORT</key>
+        <string>8765</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/abs-proxy.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/abs-proxy.err</string>
+
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+</dict>
+</plist>
