@@ -24,6 +24,7 @@ export interface CLIArgs {
   device?: string;
   name?: string;
   minutes?: number;
+  fade?: number;
   [key: string]: string | number | undefined;
 }
 
@@ -64,6 +65,7 @@ const COMMANDS = [
   'devices',
   'device',
   'sleep',
+  'status',
   'help',
   'version',
 ];
@@ -132,6 +134,18 @@ export function parseCLI(argv: string[]): CLIResult {
       i++;
       if (i < argv.length) {
         result.args.device = argv[i];
+      }
+      i++;
+      continue;
+    }
+
+    if (arg === '--fade' || arg === '-f') {
+      i++;
+      if (i < argv.length) {
+        const fadeSeconds = parseInt(argv[i], 10);
+        if (!isNaN(fadeSeconds)) {
+          result.args.fade = fadeSeconds;
+        }
       }
       i++;
       continue;
@@ -228,8 +242,14 @@ export function parseCLI(argv: string[]): CLIResult {
           result.exitCode = 2;
         } else {
           result.args.minutes = minutes;
+          // Set default fade duration if not specified
+          result.args.fade = result.args.fade ?? 30;
         }
       }
+      break;
+
+    case 'status':
+      // Status command takes no required arguments
       break;
   }
 
@@ -250,15 +270,18 @@ Commands:
   resume [--device <name>]    Resume last book
   pause                       Pause current playback
   stop                        Stop and sync progress
-  devices                     List Cast devices
+  status                      Show current playback status
+  devices                     List Cast devices (with IDs)
   device set "<name>"         Set default device
-  sleep <minutes>             Set sleep timer
+  sleep <min> [--fade <sec>]  Set sleep timer (fade default: 30s)
   sleep cancel                Cancel sleep timer
   sleep status                Show timer status
 
 Options:
   -h, --help                  Show this help
   -v, --version               Show version
+  -d, --device <name>         Target Cast device
+  -f, --fade <seconds>        Fade duration for sleep timer
   --json                      Output as JSON
 
 Environment Variables:
