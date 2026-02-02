@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     } else {
       console.log('\nAvailable devices:');
       for (const device of devices) {
-        console.log(`  • ${device.name} (${device.host}:${device.port})`);
+        console.log(`  • ${device.name} (${device.host}:${String(device.port)})`);
       }
     }
     process.exit(0);
@@ -75,10 +75,16 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Create client
+  // Create client - validation above ensures url and apiKey are present
+  const url = config.url;
+  const apiKey = config.apiKey;
+  if (!url || !apiKey) {
+    // This should never happen after validation, but TypeScript needs this
+    throw new Error('Configuration validation failed: missing url or apiKey');
+  }
   const client = new AudiobookshelfClient({
-    url: config.url!,
-    apiKey: config.apiKey!,
+    url,
+    apiKey,
     timeout: config.timeout,
   });
 
@@ -223,24 +229,29 @@ async function main(): Promise<void> {
           console.error('Error: Duration in minutes required');
           process.exit(2);
         }
-        console.log(`Sleep timer set for ${minutes} minutes.`);
+        console.log(`Sleep timer set for ${String(minutes)} minutes.`);
         console.log('Note: Timer runs in this process. For persistent timers, integrate with OpenClaw.');
         
         const timer = new SleepTimer({
-          onSyncProgress: async () => {
+          onSyncProgress: () => {
             console.log('Syncing progress...');
+            return Promise.resolve();
           },
-          onExpire: async () => {
+          onExpire: () => {
             console.log('Sleep timer expired. Stopping playback...');
             process.exit(0);
+            // Note: process.exit never returns, but TypeScript doesn't know this
+            return Promise.resolve();
           },
         });
         
         timer.start(minutes);
-        console.log(`Timer active. Will expire in ${minutes} minutes.`);
+        console.log(`Timer active. Will expire in ${String(minutes)} minutes.`);
         
-        // Keep process alive
-        await new Promise(() => {});
+        // Keep process alive - using a never-resolving promise
+        await new Promise<never>(() => {
+          // Intentionally empty - keeps process alive
+        });
       }
       break;
     }
@@ -252,7 +263,8 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: Error) => {
-  console.error(`Error: ${error.message}`);
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Error: ${message}`);
   process.exit(1);
 });
