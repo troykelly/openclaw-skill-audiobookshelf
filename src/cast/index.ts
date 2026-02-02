@@ -17,6 +17,9 @@ export {
   clearDiscoveryCache,
 } from './discovery.js';
 
+// Re-export device cache
+export { DeviceCache, getDeviceCache } from './device-cache.js';
+
 // Re-export Cast client
 export { CastClient, type MediaLoadOptions } from './client.js';
 

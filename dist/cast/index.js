@@ -8,6 +8,8 @@
 export * from './types.js';
 // Re-export discovery module
 export { DeviceDiscovery, discoverDevices, findDeviceByName, findDeviceById, clearDiscoveryCache, } from './discovery.js';
+// Re-export device cache
+export { DeviceCache, getDeviceCache } from './device-cache.js';
 // Re-export Cast client
 export { CastClient } from './client.js';
 // Re-export position tracker

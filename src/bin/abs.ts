@@ -9,7 +9,9 @@ import { parseCLI, getHelpText, getVersion } from '../lib/cli.js';
 import { loadConfig, saveConfig, Config } from '../lib/config.js';
 import { AudiobookshelfClient } from '../lib/client.js';
 import { CastController } from '../lib/cast.js';
+import type { CastDevice } from '../lib/types.js';
 import { SleepTimer } from '../lib/sleep-timer.js';
+import { getDeviceCache } from '../cast/device-cache.js';
 
 async function main(): Promise<void> {
   const result = parseCLI(process.argv.slice(2));
@@ -37,8 +39,19 @@ async function main(): Promise<void> {
   // Commands that don't need full config validation
   if (result.command === 'devices') {
     const cast = new CastController();
-    console.log('Discovering Cast devices...');
-    const devices = await cast.discoverDevices({ timeout: 10000 });
+    const deviceCache = getDeviceCache();
+    
+    // Check if we should use cache or force refresh
+    const forceRefresh = result.flags.refresh;
+    let devices = forceRefresh ? [] : deviceCache.getAll();
+    
+    if (devices.length === 0 || forceRefresh) {
+      console.log('Discovering Cast devices...');
+      devices = await cast.discoverDevices({ timeout: 15000 });
+      deviceCache.update(devices);
+    } else {
+      console.log('Using cached devices (use --refresh for fresh scan)');
+    }
     
     if (result.flags.json) {
       console.log(JSON.stringify(devices, null, 2));
@@ -173,16 +186,25 @@ async function main(): Promise<void> {
         process.exit(2);
       }
 
-      // Discover and connect to device
+      // Check cache first for the device
       const cast = new CastController();
-      console.log('Discovering Cast devices...');
-      const devices = await cast.discoverDevices({ timeout: 10000 });
-      const device = devices.find(d => d.name.toLowerCase().includes(deviceName.toLowerCase()));
+      const deviceCache = getDeviceCache();
+      let device: CastDevice | null = deviceCache.get(deviceName);
       
-      if (!device) {
-        console.error(`Error: Device "${deviceName}" not found.`);
-        console.error('Available devices:', devices.map(d => d.name).join(', ') || 'none');
-        process.exit(1);
+      if (device) {
+        console.log(`Using cached device: ${device.name} (${device.host}:${String(device.port)})`);
+      } else {
+        // Not in cache - do a full discovery with longer timeout
+        console.log('Discovering Cast devices (this may take up to 20s on slow networks)...');
+        const devices = await cast.discoverDevices({ timeout: 20000 });
+        deviceCache.update(devices);
+        device = devices.find(d => d.name.toLowerCase().includes(deviceName.toLowerCase())) ?? null;
+        
+        if (!device) {
+          console.error(`Error: Device "${deviceName}" not found.`);
+          console.error('Available devices:', devices.map(d => d.name).join(', ') || 'none');
+          process.exit(1);
+        }
       }
 
       console.log(`Connecting to ${device.name}...`);
