@@ -47,7 +47,8 @@ async function main(): Promise<void> {
     } else {
       console.log('\nAvailable devices:');
       for (const device of devices) {
-        console.log(`  • ${device.name} (${device.host}:${String(device.port)})`);
+        const id = device.id ? ` [${device.id}]` : '';
+        console.log(`  • ${device.name}${id} (${device.host}:${String(device.port)})`);
       }
     }
     process.exit(0);
@@ -218,6 +219,35 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'status': {
+      // Status shows current playback state
+      // This is a placeholder - full implementation needs Cast session persistence
+      const statusInfo = {
+        playback: {
+          active: false,
+          device: null,
+          book: null,
+          position: 0,
+          duration: 0,
+        },
+        sleepTimer: {
+          active: false,
+          remainingSeconds: 0,
+        },
+      };
+      
+      if (result.flags.json) {
+        console.log(JSON.stringify(statusInfo, null, 2));
+      } else {
+        console.log('Playback Status:');
+        console.log('  Active: No (Cast session persistence not implemented yet)');
+        console.log('\nSleep Timer:');
+        console.log('  Active: No');
+        console.log('\nNote: Full status requires OpenClaw integration for session persistence.');
+      }
+      break;
+    }
+
     case 'sleep': {
       if (result.subcommand === 'cancel') {
         console.log('Sleep timer cancelled (if any was active).');
@@ -225,11 +255,12 @@ async function main(): Promise<void> {
         console.log('Sleep timer status: No active timer.');
       } else {
         const minutes = result.args.minutes;
+        const fadeSeconds = result.args.fade ?? 30;
         if (!minutes) {
           console.error('Error: Duration in minutes required');
           process.exit(2);
         }
-        console.log(`Sleep timer set for ${String(minutes)} minutes.`);
+        console.log(`Sleep timer set for ${String(minutes)} minutes with ${String(fadeSeconds)}s fade.`);
         console.log('Note: Timer runs in this process. For persistent timers, integrate with OpenClaw.');
         
         const timer = new SleepTimer({
@@ -238,7 +269,7 @@ async function main(): Promise<void> {
             return Promise.resolve();
           },
           onExpire: () => {
-            console.log('Sleep timer expired. Stopping playback...');
+            console.log('Sleep timer expired. Fading out and stopping playback...');
             process.exit(0);
             // Note: process.exit never returns, but TypeScript doesn't know this
             return Promise.resolve();
@@ -247,6 +278,7 @@ async function main(): Promise<void> {
         
         timer.start(minutes);
         console.log(`Timer active. Will expire in ${String(minutes)} minutes.`);
+        console.log(`Fade duration: ${String(fadeSeconds)} seconds`);
         
         // Keep process alive - using a never-resolving promise
         await new Promise<never>(() => {

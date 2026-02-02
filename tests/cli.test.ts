@@ -218,6 +218,42 @@ describe('CLI Parser', () => {
       expect(result.error).toBeDefined();
       expect(result.exitCode).toBe(2);
     });
+
+    it('should parse "sleep <minutes> --fade <seconds>"', () => {
+      const result = parseCLI(['sleep', '30', '--fade', '45']);
+      expect(result.command).toBe('sleep');
+      expect(result.args.minutes).toBe(30);
+      expect(result.args.fade).toBe(45);
+    });
+
+    it('should parse "sleep <minutes> -f <seconds>"', () => {
+      const result = parseCLI(['sleep', '30', '-f', '60']);
+      expect(result.command).toBe('sleep');
+      expect(result.args.minutes).toBe(30);
+      expect(result.args.fade).toBe(60);
+    });
+
+    it('should use default fade of 30 seconds when not specified', () => {
+      const result = parseCLI(['sleep', '30']);
+      expect(result.args.fade).toBe(30);
+    });
+  });
+
+  describe('status command', () => {
+    it('should parse "status"', () => {
+      const result = parseCLI(['status']);
+      expect(result.command).toBe('status');
+      expect(result.error).toBeUndefined();
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('should parse "status --json"', () => {
+      const result = parseCLI(['status', '--json']);
+      expect(result.command).toBe('status');
+      expect(result.flags.json).toBe(true);
+      expect(result.error).toBeUndefined();
+      expect(result.exitCode).toBe(0);
+    });
   });
 
   describe('unknown command', () => {
