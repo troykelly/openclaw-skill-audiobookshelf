@@ -17,6 +17,9 @@ export {
   clearDiscoveryCache,
 } from './discovery.js';
 
+// Re-export Cast client
+export { CastClient, type MediaLoadOptions } from './client.js';
+
 // Re-export castv2-client types for convenience
 export { Client, DefaultMediaReceiver } from 'castv2-client';
 export { Bonjour } from 'bonjour-service';
