@@ -235,10 +235,13 @@ async function main(): Promise<void> {
         const timer = new SleepTimer({
           onSyncProgress: () => {
             console.log('Syncing progress...');
+            return Promise.resolve();
           },
           onExpire: () => {
             console.log('Sleep timer expired. Stopping playback...');
             process.exit(0);
+            // Note: process.exit never returns, but TypeScript doesn't know this
+            return Promise.resolve();
           },
         });
         
