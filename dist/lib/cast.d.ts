@@ -37,6 +37,9 @@ export declare class CastController {
     discoverDevices(options?: DiscoveryOptions): Promise<CastDevice[]>;
     /**
      * Convert services to devices, resolving .local hostnames as needed
+     *
+     * First builds a map of .local hostnames to IPs from services that have addresses,
+     * then uses this cache to resolve hostnames for Cast groups (which often have empty addresses).
      */
     private resolveDevices;
     /**

@@ -169,12 +169,24 @@ export class DeviceDiscovery {
 
   /**
    * Convert services to devices, resolving .local hostnames as needed
+   * 
+   * First builds a map of .local hostnames to IPs from services that have addresses,
+   * then uses this cache to resolve hostnames for Cast groups (which often have empty addresses).
    */
   private async resolveDevices(services: Service[]): Promise<CastDevice[]> {
+    // Build hostname → IP map from services that have resolved addresses
+    const hostnameToIp = new Map<string, string>();
+    for (const service of services) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- host may be undefined in mocks
+      if (service.addresses?.length && service.host?.endsWith('.local')) {
+        hostnameToIp.set(service.host, service.addresses[0]);
+      }
+    }
+
     const devices: CastDevice[] = [];
     
     for (const service of services) {
-      const device = await this.serviceToDeviceWithResolution(service);
+      const device = await this.serviceToDeviceWithResolution(service, hostnameToIp);
       
       // Avoid duplicates by host and port
       if (!devices.some((d) => d.host === device.host && d.port === device.port)) {
@@ -187,8 +199,14 @@ export class DeviceDiscovery {
 
   /**
    * Convert a Bonjour service to a CastDevice, resolving .local hostnames
+   * 
+   * @param service - The Bonjour service to convert
+   * @param hostnameCache - Map of .local hostnames to IPs from other discovered services
    */
-  private async serviceToDeviceWithResolution(service: Service): Promise<CastDevice> {
+  private async serviceToDeviceWithResolution(
+    service: Service,
+    hostnameCache: Map<string, string>
+  ): Promise<CastDevice> {
     const txtRecord = service.txt as Record<string, string> | undefined;
 
     // Use friendly name (fn) from TXT record if available, fall back to service name
@@ -197,12 +215,20 @@ export class DeviceDiscovery {
     // Determine host: prefer addresses array, fall back to hostname
     let host = service.addresses?.[0] ?? service.host;
 
-    // If we have a .local hostname and no resolved address, attempt DNS resolution
+    // If we have a .local hostname and no resolved address, try resolution
     if (
       !service.addresses?.length &&
       service.host.endsWith('.local')
     ) {
-      host = await this.resolveLocalHostname(service.host);
+      // First check if another service has the same hostname with a resolved IP
+      // This is common for Cast groups which share a hostname with their base device
+      const cachedIp = hostnameCache.get(service.host);
+      if (cachedIp) {
+        host = cachedIp;
+      } else {
+        // Fall back to DNS resolution
+        host = await this.resolveLocalHostname(service.host);
+      }
     }
 
     return {
