@@ -3,6 +3,7 @@
  *
  * Provides discovery and playback control for Google Cast devices.
  * Uses bonjour-service for mDNS discovery and castv2-client for Cast protocol.
+ * Resolves .local hostnames when addresses are not provided (common for Cast groups).
  */
 import type { CastDevice } from './types.js';
 /**
@@ -34,6 +35,17 @@ export declare class CastController {
      * @returns Array of discovered Cast devices
      */
     discoverDevices(options?: DiscoveryOptions): Promise<CastDevice[]>;
+    /**
+     * Convert services to devices, resolving .local hostnames as needed
+     */
+    private resolveDevices;
+    /**
+     * Resolve a .local mDNS hostname to an IP address
+     *
+     * @param hostname - The .local hostname to resolve
+     * @returns The resolved IP address, or the original hostname if resolution fails
+     */
+    private resolveLocalHostname;
     /**
      * Connect to a Cast device
      * @param device - The device to connect to
