@@ -290,7 +290,9 @@ async function main() {
             break;
         }
         case 'service': {
-            const port = parseInt(process.env.ABS_PROXY_PORT ?? '8765', 10);
+            const proxyConfig = config.proxy ?? {};
+            const port = proxyConfig.listenPort ?? 8765;
+            const host = proxyConfig.listenHost ?? '::';
             switch (result.subcommand) {
                 case 'run': {
                     // Run proxy server in foreground
@@ -302,11 +304,17 @@ async function main() {
                     const { ProxyServer } = await import('../proxy/index.js');
                     const server = new ProxyServer({
                         port,
+                        host,
+                        trustedProxies: proxyConfig.trustedProxies,
+                        publicUrl: proxyConfig.publicUrl,
                         audiobookshelfUrl: config.url,
                         audiobookshelfToken: config.apiKey,
                     });
                     server.on('listening', () => {
-                        console.log(`Audio proxy server listening on port ${String(port)}`);
+                        console.log(`Audio proxy server listening on ${host}:${String(port)}`);
+                        if (proxyConfig.publicUrl) {
+                            console.log(`Public URL: ${proxyConfig.publicUrl}`);
+                        }
                         console.log('Health check: http://localhost:' + String(port) + '/health');
                         console.log('Press Ctrl+C to stop');
                     });

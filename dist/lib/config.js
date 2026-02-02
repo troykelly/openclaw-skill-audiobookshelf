@@ -115,8 +115,33 @@ export async function loadConfig() {
             envConfig.timeout = timeout;
         }
     }
+    // Proxy configuration from environment
+    const proxyConfig = {};
+    if (process.env.ABS_LISTEN_PORT) {
+        const port = parseInt(process.env.ABS_LISTEN_PORT, 10);
+        if (!isNaN(port)) {
+            proxyConfig.listenPort = port;
+        }
+    }
+    if (process.env.ABS_LISTEN_HOST) {
+        proxyConfig.listenHost = process.env.ABS_LISTEN_HOST;
+    }
+    if (process.env.ABS_TRUSTED_PROXIES) {
+        proxyConfig.trustedProxies = process.env.ABS_TRUSTED_PROXIES.split(',').map(s => s.trim());
+    }
+    if (process.env.ABS_PUBLIC_URL) {
+        proxyConfig.publicUrl = process.env.ABS_PUBLIC_URL;
+    }
+    if (Object.keys(proxyConfig).length > 0) {
+        envConfig.proxy = proxyConfig;
+    }
     // Merge: file first, then env vars override
-    return merge(fileConfig, envConfig);
+    const merged = merge(fileConfig, envConfig);
+    // Deep merge proxy config
+    if (fileConfig.proxy || envConfig.proxy) {
+        merged.proxy = { ...fileConfig.proxy, ...envConfig.proxy };
+    }
+    return merged;
 }
 /**
  * Save configuration to file

@@ -7,6 +7,8 @@
 import { createServer } from 'http';
 import { EventEmitter } from 'events';
 import { AudioPipeline } from './audio-pipeline.js';
+/** Default trusted proxies (localhost only) */
+const DEFAULT_TRUSTED_PROXIES = ['127.0.0.1/32', '::1/128'];
 /**
  * Audio proxy server with real-time volume control
  */
@@ -15,12 +17,16 @@ export class ProxyServer extends EventEmitter {
     sessions = new Map();
     port;
     host;
+    trustedProxies;
+    publicUrl;
     absUrl;
     absToken;
     constructor(options) {
         super();
         this.port = options.port ?? 8765;
-        this.host = options.host ?? '0.0.0.0';
+        this.host = options.host ?? '::';
+        this.trustedProxies = options.trustedProxies ?? DEFAULT_TRUSTED_PROXIES;
+        this.publicUrl = options.publicUrl;
         this.absUrl = options.audiobookshelfUrl;
         this.absToken = options.audiobookshelfToken;
     }
@@ -110,9 +116,22 @@ export class ProxyServer extends EventEmitter {
     }
     /**
      * Get the server URL for clients to connect to
+     * Returns publicUrl if configured, otherwise constructs from host:port
      */
     getServerUrl() {
-        return `http://${this.host === '0.0.0.0' ? '127.0.0.1' : this.host}:${String(this.port)}`;
+        if (this.publicUrl) {
+            // Remove trailing slash if present
+            return this.publicUrl.replace(/\/$/, '');
+        }
+        // Fallback to local URL (for local testing)
+        const host = this.host === '::' || this.host === '0.0.0.0' ? '127.0.0.1' : this.host;
+        return `http://${host}:${String(this.port)}`;
+    }
+    /**
+     * Get trusted proxy CIDRs
+     */
+    getTrustedProxies() {
+        return [...this.trustedProxies];
     }
     /**
      * Handle incoming HTTP request

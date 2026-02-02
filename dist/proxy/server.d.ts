@@ -22,8 +22,12 @@ export interface StreamSession {
 export interface ProxyServerOptions {
     /** Port to listen on (default: 8765) */
     port?: number;
-    /** Host to bind to (default: 0.0.0.0) */
+    /** Host to bind to (default: :: for dual-stack IPv6-first) */
     host?: string;
+    /** Trusted proxy CIDRs for X-Forwarded-For (default: localhost only) */
+    trustedProxies?: string[];
+    /** Public URL for Cast devices (required for external access) */
+    publicUrl?: string;
     /** Audiobookshelf server URL */
     audiobookshelfUrl: string;
     /** Audiobookshelf API token */
@@ -37,6 +41,8 @@ export declare class ProxyServer extends EventEmitter {
     private readonly sessions;
     private readonly port;
     private readonly host;
+    private readonly trustedProxies;
+    private readonly publicUrl?;
     private readonly absUrl;
     private readonly absToken;
     constructor(options: ProxyServerOptions);
@@ -70,8 +76,13 @@ export declare class ProxyServer extends EventEmitter {
     stopSession(sessionId: string): boolean;
     /**
      * Get the server URL for clients to connect to
+     * Returns publicUrl if configured, otherwise constructs from host:port
      */
     getServerUrl(): string;
+    /**
+     * Get trusted proxy CIDRs
+     */
+    getTrustedProxies(): string[];
     /**
      * Handle incoming HTTP request
      */

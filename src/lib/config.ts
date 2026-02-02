@@ -10,6 +10,20 @@ import * as path from 'path';
 import * as os from 'os';
 
 /**
+ * Proxy server configuration
+ */
+export interface ProxyConfig {
+  /** Port to listen on (default: 8765) */
+  listenPort?: number;
+  /** Host to bind to (default: :: for dual-stack IPv6-first) */
+  listenHost?: string;
+  /** Trusted proxy CIDRs for X-Forwarded-For (default: localhost only) */
+  trustedProxies?: string[];
+  /** Public URL for Cast devices to reach this proxy */
+  publicUrl?: string;
+}
+
+/**
  * Application configuration
  */
 export interface AppConfig {
@@ -21,6 +35,8 @@ export interface AppConfig {
   defaultDevice?: string;
   /** Request timeout in milliseconds */
   timeout?: number;
+  /** Proxy server configuration */
+  proxy?: ProxyConfig;
 }
 
 /**
@@ -162,8 +178,36 @@ export async function loadConfig(): Promise<AppConfig> {
     }
   }
 
+  // Proxy configuration from environment
+  const proxyConfig: ProxyConfig = {};
+  if (process.env.ABS_LISTEN_PORT) {
+    const port = parseInt(process.env.ABS_LISTEN_PORT, 10);
+    if (!isNaN(port)) {
+      proxyConfig.listenPort = port;
+    }
+  }
+  if (process.env.ABS_LISTEN_HOST) {
+    proxyConfig.listenHost = process.env.ABS_LISTEN_HOST;
+  }
+  if (process.env.ABS_TRUSTED_PROXIES) {
+    proxyConfig.trustedProxies = process.env.ABS_TRUSTED_PROXIES.split(',').map(s => s.trim());
+  }
+  if (process.env.ABS_PUBLIC_URL) {
+    proxyConfig.publicUrl = process.env.ABS_PUBLIC_URL;
+  }
+  if (Object.keys(proxyConfig).length > 0) {
+    envConfig.proxy = proxyConfig;
+  }
+
   // Merge: file first, then env vars override
-  return merge(fileConfig, envConfig);
+  const merged = merge(fileConfig, envConfig);
+  
+  // Deep merge proxy config
+  if (fileConfig.proxy || envConfig.proxy) {
+    merged.proxy = { ...fileConfig.proxy, ...envConfig.proxy };
+  }
+  
+  return merged;
 }
 
 /**

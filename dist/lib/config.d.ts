@@ -5,6 +5,19 @@
  * environment variables and config files.
  */
 /**
+ * Proxy server configuration
+ */
+export interface ProxyConfig {
+    /** Port to listen on (default: 8765) */
+    listenPort?: number;
+    /** Host to bind to (default: :: for dual-stack IPv6-first) */
+    listenHost?: string;
+    /** Trusted proxy CIDRs for X-Forwarded-For (default: localhost only) */
+    trustedProxies?: string[];
+    /** Public URL for Cast devices to reach this proxy */
+    publicUrl?: string;
+}
+/**
  * Application configuration
  */
 export interface AppConfig {
@@ -16,6 +29,8 @@ export interface AppConfig {
     defaultDevice?: string;
     /** Request timeout in milliseconds */
     timeout?: number;
+    /** Proxy server configuration */
+    proxy?: ProxyConfig;
 }
 /**
  * Audiobookshelf client configuration (required fields)
