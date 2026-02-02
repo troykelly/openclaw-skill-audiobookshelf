@@ -135,6 +135,7 @@ export class DeviceDiscovery {
         // Build hostname → IP map from services that have resolved addresses
         const hostnameToIp = new Map();
         for (const service of services) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- host may be undefined in mocks
             if (service.addresses?.length && service.host?.endsWith('.local')) {
                 hostnameToIp.set(service.host, service.addresses[0]);
             }

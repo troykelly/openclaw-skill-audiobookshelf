@@ -39,6 +39,7 @@ export interface CLIFlags {
   help?: boolean;
   version?: boolean;
   json?: boolean;
+  refresh?: boolean;
   [key: string]: boolean | undefined;
 }
 
@@ -123,6 +124,12 @@ export function parseCLI(argv: string[]): CLIResult {
 
     if (arg === '--json') {
       result.flags.json = true;
+      i++;
+      continue;
+    }
+
+    if (arg === '--refresh') {
+      result.flags.refresh = true;
       i++;
       continue;
     }

@@ -70,6 +70,11 @@ export function parseCLI(argv) {
             i++;
             continue;
         }
+        if (arg === '--refresh') {
+            result.flags.refresh = true;
+            i++;
+            continue;
+        }
         // Flag with value
         if (arg === '--library' || arg === '-l') {
             i++;

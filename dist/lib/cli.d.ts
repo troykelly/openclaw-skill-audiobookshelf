@@ -32,6 +32,7 @@ export interface CLIFlags {
     help?: boolean;
     version?: boolean;
     json?: boolean;
+    refresh?: boolean;
     [key: string]: boolean | undefined;
 }
 /**
