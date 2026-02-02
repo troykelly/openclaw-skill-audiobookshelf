@@ -3,6 +3,10 @@ set -euo pipefail
 
 echo "=== Post-create setup for openclaw-skill-audiobookshelf ==="
 
+# Install ffmpeg (required for audio proxy)
+echo "Installing ffmpeg..."
+sudo apt-get update && sudo apt-get install -y ffmpeg
+
 # Install pnpm if not present
 if ! command -v pnpm &> /dev/null; then
   echo "Installing pnpm..."
