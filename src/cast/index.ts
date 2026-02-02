@@ -8,6 +8,15 @@
 // Re-export all types
 export * from './types.js';
 
+// Re-export discovery module
+export {
+  DeviceDiscovery,
+  discoverDevices,
+  findDeviceByName,
+  findDeviceById,
+  clearDiscoveryCache,
+} from './discovery.js';
+
 // Re-export castv2-client types for convenience
 export { Client, DefaultMediaReceiver } from 'castv2-client';
 export { Bonjour } from 'bonjour-service';
