@@ -100,17 +100,15 @@ describe('AudiobookshelfClient', () => {
         json: () =>
           Promise.resolve({
             results: mockBooks.map((b) => ({
-              libraryItem: {
-                id: b.id,
-                media: {
-                  metadata: {
-                    title: b.title,
-                    authorName: b.author,
-                    narratorName: b.narrator,
-                  },
-                  duration: b.duration,
+              id: b.id,
+              libraryId: b.libraryId,
+              media: {
+                metadata: {
+                  title: b.title,
+                  authorName: b.author,
+                  narratorName: b.narrator,
                 },
-                libraryId: b.libraryId,
+                duration: b.duration,
                 coverPath: b.coverPath,
               },
             })),
@@ -154,6 +152,16 @@ describe('AudiobookshelfClient', () => {
         },
       ];
 
+      // First call: getLibraries
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            libraries: [{ id: 'lib-1', name: 'Audiobooks', folders: ['/books'], icon: 'book', mediaType: 'book' }],
+          }),
+      } as Response);
+
+      // Second call: search
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -177,7 +185,7 @@ describe('AudiobookshelfClient', () => {
       const result: Book[] = await client.search('harry');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/search') as string,
+        expect.stringContaining('/search') as string,
         expect.anything()
       );
       expect(result).toHaveLength(1);
@@ -185,6 +193,16 @@ describe('AudiobookshelfClient', () => {
     });
 
     it('should return empty array for no results', async () => {
+      // First call: getLibraries
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            libraries: [{ id: 'lib-1', name: 'Audiobooks', folders: ['/books'], icon: 'book', mediaType: 'book' }],
+          }),
+      } as Response);
+
+      // Second call: search
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ book: [] }),
