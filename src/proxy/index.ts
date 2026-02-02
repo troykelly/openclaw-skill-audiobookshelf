@@ -17,3 +17,12 @@ export {
   type ProxyServerOptions,
   type StreamSession,
 } from './server.js';
+
+export {
+  fadeVolume,
+  fadeOut,
+  fadeIn,
+  FadeAbortedError,
+  type FadeOptions,
+  type FadeResult,
+} from './fade.js';
