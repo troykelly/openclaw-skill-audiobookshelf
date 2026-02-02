@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable configuration
   - Device discovery and connection tests
 
+- **Service packaging** — Deployment configurations (#26)
+  - `abs service run/start/stop/status` CLI commands
+  - systemd unit file for Linux
+  - launchd plist for macOS
+  - Dockerfile and docker-compose.yml
+  - Health check endpoint (`/health`)
+
 ### Changed
 
 - Sleep timer now defaults to 30-second fade

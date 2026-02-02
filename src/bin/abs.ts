@@ -288,6 +288,113 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'service': {
+      const port = parseInt(process.env.ABS_PROXY_PORT ?? '8765', 10);
+      
+      switch (result.subcommand) {
+        case 'run': {
+          // Run proxy server in foreground
+          if (!config.url || !config.apiKey) {
+            console.error('Error: ABS_SERVER and ABS_TOKEN must be set to run the proxy');
+            process.exit(1);
+          }
+
+          // Dynamic import to avoid loading proxy dependencies unless needed
+          const { ProxyServer } = await import('../proxy/index.js');
+          
+          const server = new ProxyServer({
+            port,
+            audiobookshelfUrl: config.url,
+            audiobookshelfToken: config.apiKey,
+          });
+
+          server.on('listening', () => {
+            console.log(`Audio proxy server listening on port ${String(port)}`);
+            console.log('Health check: http://localhost:' + String(port) + '/health');
+            console.log('Press Ctrl+C to stop');
+          });
+
+          server.on('session-started', (info: { sessionId: string; bookId: string }) => {
+            console.log(`Session started: ${info.sessionId} (book: ${info.bookId})`);
+          });
+
+          server.on('session-ended', (info: { sessionId: string }) => {
+            console.log(`Session ended: ${info.sessionId}`);
+          });
+
+          server.on('error', (err: Error) => {
+            console.error('Server error:', err.message);
+          });
+
+          // Handle shutdown
+          process.on('SIGINT', () => {
+            console.log('\nShutting down...');
+            void server.stop().then(() => {
+              process.exit(0);
+            });
+          });
+
+          process.on('SIGTERM', () => {
+            void server.stop().then(() => {
+              process.exit(0);
+            });
+          });
+
+          await server.start();
+
+          // Keep process alive
+          await new Promise<never>(() => {
+            // Intentionally empty - keeps process alive
+          });
+          break;
+        }
+
+        case 'start': {
+          console.log('Starting proxy daemon...');
+          console.log('Note: For persistent service, use systemd/launchd or Docker.');
+          console.log('See deploy/ directory for configuration files.');
+          console.log('Or run "abs service run" in a terminal/screen session.');
+          break;
+        }
+
+        case 'stop': {
+          console.log('Stopping proxy daemon...');
+          console.log('Note: Use systemctl stop abs-proxy or launchctl unload for managed services.');
+          break;
+        }
+
+        case 'status': {
+          // Check if proxy is running by hitting health endpoint
+          try {
+            const response = await fetch(`http://localhost:${String(port)}/health`);
+            if (response.ok) {
+              const health = await response.json() as { status: string; sessions: number };
+              if (result.flags.json) {
+                console.log(JSON.stringify({ running: true, port, ...health }, null, 2));
+              } else {
+                console.log(`Proxy Status: Running on port ${String(port)}`);
+                console.log(`Active sessions: ${String(health.sessions)}`);
+              }
+            } else {
+              console.log('Proxy Status: Not running or unhealthy');
+            }
+          } catch {
+            if (result.flags.json) {
+              console.log(JSON.stringify({ running: false, port }, null, 2));
+            } else {
+              console.log('Proxy Status: Not running');
+            }
+          }
+          break;
+        }
+
+        default:
+          console.error('Unknown service subcommand');
+          process.exit(2);
+      }
+      break;
+    }
+
     default:
       console.error(`Unknown command: ${result.command}`);
       console.log(getHelpText());
