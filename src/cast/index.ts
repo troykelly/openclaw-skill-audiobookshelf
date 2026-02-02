@@ -29,6 +29,14 @@ export {
   type PositionTrackerOptions,
 } from './position-tracker.js';
 
+// Re-export sleep timer
+export {
+  CastSleepTimer,
+  type CastSleepTimerOptions,
+  type CastSleepTimerState,
+  type SleepTimerPhase,
+} from './sleep-timer.js';
+
 // Re-export castv2-client types for convenience
 export { Client, DefaultMediaReceiver } from 'castv2-client';
 export { Bonjour } from 'bonjour-service';
