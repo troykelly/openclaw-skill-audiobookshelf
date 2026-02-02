@@ -3,6 +3,7 @@
  *
  * Discovers Google Cast devices on the local network using bonjour-service.
  * Includes caching, fuzzy name matching, and ID lookup.
+ * Resolves .local hostnames when addresses are not provided (common for Cast groups).
  */
 import type { CastDevice, DiscoveryOptions } from './types.js';
 /**
@@ -73,9 +74,20 @@ export declare class DeviceDiscovery {
      */
     private performDiscovery;
     /**
-     * Convert a Bonjour service to a CastDevice
+     * Convert services to devices, resolving .local hostnames as needed
      */
-    private serviceToDevice;
+    private resolveDevices;
+    /**
+     * Convert a Bonjour service to a CastDevice, resolving .local hostnames
+     */
+    private serviceToDeviceWithResolution;
+    /**
+     * Resolve a .local mDNS hostname to an IP address
+     *
+     * @param hostname - The .local hostname to resolve
+     * @returns The resolved IP address, or the original hostname if resolution fails
+     */
+    private resolveLocalHostname;
 }
 /**
  * Discover Cast devices on the network (standalone function)

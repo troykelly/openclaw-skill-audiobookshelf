@@ -3,10 +3,12 @@
  *
  * Discovers Google Cast devices on the local network using bonjour-service.
  * Includes caching, fuzzy name matching, and ID lookup.
+ * Resolves .local hostnames when addresses are not provided (common for Cast groups).
  */
 
 import { Bonjour } from 'bonjour-service';
 import type { Service, Browser } from 'bonjour-service';
+import { lookup as dnsLookup } from 'dns/promises';
 import type { CastDevice, DiscoveryOptions } from './types.js';
 
 /**
@@ -48,7 +50,7 @@ export class DeviceDiscovery {
    * @returns Array of discovered Cast devices
    */
   async discoverDevices(options: ExtendedDiscoveryOptions = {}): Promise<CastDevice[]> {
-    const timeout = options.timeout ?? 5000;
+    const timeout = options.timeout ?? 10000;
     const forceRefresh = options.forceRefresh ?? false;
 
     // Check cache validity
@@ -145,42 +147,88 @@ export class DeviceDiscovery {
    */
   private performDiscovery(timeout: number): Promise<CastDevice[]> {
     return new Promise((resolve) => {
-      const devices: CastDevice[] = [];
+      const services: Service[] = [];
       const bonjour = new Bonjour();
 
       const browser: Browser = bonjour.find({ type: 'googlecast' });
 
       browser.on('up', (service: Service) => {
-        const device = this.serviceToDevice(service);
-
-        // Avoid duplicates by host and port
-        if (!devices.some((d) => d.host === device.host && d.port === device.port)) {
-          devices.push(device);
-        }
+        services.push(service);
       });
 
       // Resolve after timeout
       setTimeout(() => {
         browser.stop();
         bonjour.destroy();
-        resolve(devices);
+        
+        // Convert services to devices with hostname resolution
+        void this.resolveDevices(services).then(resolve);
       }, timeout);
     });
   }
 
   /**
-   * Convert a Bonjour service to a CastDevice
+   * Convert services to devices, resolving .local hostnames as needed
    */
-  private serviceToDevice(service: Service): CastDevice {
+  private async resolveDevices(services: Service[]): Promise<CastDevice[]> {
+    const devices: CastDevice[] = [];
+    
+    for (const service of services) {
+      const device = await this.serviceToDeviceWithResolution(service);
+      
+      // Avoid duplicates by host and port
+      if (!devices.some((d) => d.host === device.host && d.port === device.port)) {
+        devices.push(device);
+      }
+    }
+    
+    return devices;
+  }
+
+  /**
+   * Convert a Bonjour service to a CastDevice, resolving .local hostnames
+   */
+  private async serviceToDeviceWithResolution(service: Service): Promise<CastDevice> {
     const txtRecord = service.txt as Record<string, string> | undefined;
 
+    // Use friendly name (fn) from TXT record if available, fall back to service name
+    const friendlyName = txtRecord?.fn ?? service.name;
+
+    // Determine host: prefer addresses array, fall back to hostname
+    let host = service.addresses?.[0] ?? service.host;
+
+    // If we have a .local hostname and no resolved address, attempt DNS resolution
+    if (
+      !service.addresses?.length &&
+      service.host.endsWith('.local')
+    ) {
+      host = await this.resolveLocalHostname(service.host);
+    }
+
     return {
-      name: service.name,
-      host: service.addresses?.[0] ?? service.host,
+      name: friendlyName,
+      host,
       port: service.port || 8009,
       id: txtRecord?.id,
     };
   }
+
+  /**
+   * Resolve a .local mDNS hostname to an IP address
+   * 
+   * @param hostname - The .local hostname to resolve
+   * @returns The resolved IP address, or the original hostname if resolution fails
+   */
+  private async resolveLocalHostname(hostname: string): Promise<string> {
+    try {
+      const result = await dnsLookup(hostname);
+      return result.address;
+    } catch {
+      // DNS lookup failed - fall back to the original hostname
+      return hostname;
+    }
+  }
+
 }
 
 // Shared instance for standalone functions

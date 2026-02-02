@@ -31,7 +31,7 @@ async function main() {
     if (result.command === 'devices') {
         const cast = new CastController();
         console.log('Discovering Cast devices...');
-        const devices = await cast.discoverDevices({ timeout: 5000 });
+        const devices = await cast.discoverDevices({ timeout: 10000 });
         if (result.flags.json) {
             console.log(JSON.stringify(devices, null, 2));
         }
@@ -169,7 +169,7 @@ async function main() {
             // Discover and connect to device
             const cast = new CastController();
             console.log('Discovering Cast devices...');
-            const devices = await cast.discoverDevices({ timeout: 5000 });
+            const devices = await cast.discoverDevices({ timeout: 10000 });
             const device = devices.find(d => d.name.toLowerCase().includes(deviceName.toLowerCase()));
             if (!device) {
                 console.error(`Error: Device "${deviceName}" not found.`);

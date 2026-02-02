@@ -74,6 +74,11 @@ vi.mock('castv2-client', () => ({
   DefaultMediaReceiver: vi.fn(),
 }));
 
+// Mock dns/promises for .local hostname resolution
+vi.mock('dns/promises', () => ({
+  lookup: vi.fn().mockResolvedValue({ address: '192.168.1.100', family: 4 }),
+}));
+
 describe('CastController', () => {
   let controller: CastController;
 
@@ -139,11 +144,21 @@ describe('CastController', () => {
       expect(devices).toBeInstanceOf(Array);
     });
 
-    it('should use default timeout if not specified', { timeout: 10000 }, async () => {
+    it('should use default timeout of 10000ms if not specified', async () => {
+      // Use fake timers to avoid waiting for the full 10s timeout
+      vi.useFakeTimers();
+      
       // This test just ensures the method works with defaults
-      // Default timeout is 5 seconds, so we use a longer test timeout
+      // Default timeout is now 10 seconds
       const promise = controller.discoverDevices();
-      await expect(promise).resolves.toBeInstanceOf(Array);
+      
+      // Advance timers past the default timeout
+      await vi.advanceTimersByTimeAsync(10000);
+      
+      const devices = await promise;
+      expect(devices).toBeInstanceOf(Array);
+      
+      vi.useRealTimers();
     });
   });
 

@@ -29,12 +29,34 @@ class MockBonjour {
 // Store mock instance for test access
 let mockBonjourInstance: MockBonjour | null = null;
 
+// Mock DNS lookup results - keyed by hostname
+const mockDnsResults = new Map<string, { address: string; family: number } | Error>();
+
 // Mock bonjour-service before importing discovery
 vi.mock('bonjour-service', () => {
   return {
     Bonjour: vi.fn(() => {
       mockBonjourInstance = new MockBonjour();
       return mockBonjourInstance;
+    }),
+  };
+});
+
+// Mock dns/promises for .local hostname resolution
+vi.mock('dns/promises', () => {
+  return {
+    lookup: vi.fn((hostname: string) => {
+      const result = mockDnsResults.get(hostname);
+      if (result instanceof Error) {
+        return Promise.reject(result);
+      }
+      if (result) {
+        return Promise.resolve(result);
+      }
+      // Default: simulate ENOTFOUND
+      const err = new Error(`getaddrinfo ENOTFOUND ${hostname}`);
+      (err as NodeJS.ErrnoException).code = 'ENOTFOUND';
+      return Promise.reject(err);
     }),
   };
 });
@@ -89,14 +111,26 @@ describe('DeviceDiscovery', () => {
       expect(devices[0].id).toBe('device-1');
     });
 
-    it('should use default timeout if not specified', async () => {
+    it('should use default timeout of 10000ms if not specified', async () => {
       const discoverPromise = discovery.discoverDevices();
 
-      // Should resolve after 5000ms (default)
+      // Should NOT resolve after 5000ms
+      await vi.advanceTimersByTimeAsync(5000);
+      
+      // Add a device at 6s - should still be discovered
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Late Device',
+        addresses: ['192.168.1.150'],
+        port: 8009,
+        txt: { id: 'late-device' },
+      });
+
+      // Should resolve after 10000ms (default)
       await vi.advanceTimersByTimeAsync(5000);
 
       const devices = await discoverPromise;
-      expect(devices).toEqual([]);
+      expect(devices).toHaveLength(1);
+      expect(devices[0].name).toBe('Late Device');
     });
 
     it('should return empty array on timeout with no devices', async () => {
@@ -160,6 +194,189 @@ describe('DeviceDiscovery', () => {
 
       expect(mockBonjourInstance?.browser.stop).toHaveBeenCalled();
       expect(mockBonjourInstance?.destroy).toHaveBeenCalled();
+    });
+
+    it('should use friendly name (fn) from TXT record when available', async () => {
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      // Cast groups have long mDNS names but friendly names in TXT fn field
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Google-Cast-Group-abc123xyz789def456',
+        host: 'upstairs-speakers.local',
+        addresses: ['192.168.1.200'],
+        port: 8009,
+        txt: { id: 'group-1', fn: 'Upstairs Speakers' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].name).toBe('Upstairs Speakers');
+      expect(devices[0].id).toBe('group-1');
+    });
+
+    it('should fall back to service name when no friendly name in TXT', async () => {
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Kitchen Nest Hub',
+        host: 'kitchen.local',
+        addresses: ['192.168.1.201'],
+        port: 8009,
+        txt: { id: 'device-kitchen' }, // No fn field
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].name).toBe('Kitchen Nest Hub');
+    });
+  });
+
+  describe('.local hostname resolution', () => {
+    beforeEach(() => {
+      mockDnsResults.clear();
+    });
+
+    it('should resolve .local hostname when addresses array is empty', async () => {
+      // Cast groups often have empty addresses array
+      mockDnsResults.set('upstairs-speakers.local', { address: '192.168.1.200', family: 4 });
+
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Google-Cast-Group-abc123xyz789',
+        host: 'upstairs-speakers.local',
+        addresses: [], // Empty addresses - common for Cast groups
+        port: 8009,
+        txt: { id: 'group-1', fn: 'Upstairs Speakers' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].host).toBe('192.168.1.200');
+      expect(devices[0].name).toBe('Upstairs Speakers');
+    });
+
+    it('should resolve .local hostname when addresses is undefined', async () => {
+      mockDnsResults.set('bedroom-speaker.local', { address: '192.168.1.201', family: 4 });
+
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Bedroom Speaker',
+        host: 'bedroom-speaker.local',
+        // addresses: undefined (not present)
+        port: 8009,
+        txt: { id: 'device-2' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].host).toBe('192.168.1.201');
+    });
+
+    it('should fall back to .local hostname if DNS lookup fails', async () => {
+      // No mock result = ENOTFOUND error
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Unreachable Group',
+        host: 'unreachable-group.local',
+        addresses: [],
+        port: 8009,
+        txt: { id: 'group-unreachable', fn: 'Unreachable Group' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      // Falls back to the .local hostname
+      expect(devices[0].host).toBe('unreachable-group.local');
+    });
+
+    it('should not attempt DNS lookup for non-.local hostnames', async () => {
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      // Device with regular hostname (not .local)
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Cloud Device',
+        host: 'device.example.com',
+        addresses: [],
+        port: 8009,
+        txt: { id: 'cloud-1' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      // Should use the hostname as-is without DNS lookup attempt
+      expect(devices[0].host).toBe('device.example.com');
+    });
+
+    it('should prefer addresses array over DNS resolution', async () => {
+      // Set up mock DNS result that should NOT be used
+      mockDnsResults.set('speaker.local', { address: '10.0.0.99', family: 4 });
+
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'Living Room',
+        host: 'speaker.local',
+        addresses: ['192.168.1.100'], // Has address - should use this
+        port: 8009,
+        txt: { id: 'device-lr' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].host).toBe('192.168.1.100'); // From addresses, not DNS
+    });
+
+    it('should handle IPv6 addresses from DNS lookup', async () => {
+      mockDnsResults.set('ipv6-device.local', { address: 'fe80::1', family: 6 });
+
+      const discoverPromise = discovery.discoverDevices({ timeout: 5000 });
+
+      await vi.advanceTimersByTimeAsync(10);
+
+      mockBonjourInstance?.browser.emit('up', {
+        name: 'IPv6 Device',
+        host: 'ipv6-device.local',
+        addresses: [],
+        port: 8009,
+        txt: { id: 'ipv6-1' },
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const devices = await discoverPromise;
+      expect(devices).toHaveLength(1);
+      expect(devices[0].host).toBe('fe80::1');
     });
   });
 
